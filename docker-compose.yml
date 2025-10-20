@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  spark_notebook:
+    build:
+      context: ./spark_notebook
+      dockerfile: Dockerfile
+    container_name: spark_notebook
+    networks:
+      - habr
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./app:/app  # здесь скрипты
+      - ./spark-events:/home/jovyan/spark-events           # для хранения событий Spark
+    working_dir: /app
+    ports:
+      - "8888:8888"           # Jupyter Notebook
+      - "4050:4050"           # Spark Web UI  
+    command: "start-notebook.sh --NotebookApp.token='' --NotebookApp.password='' --ip=0.0.0.0"
+
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=habr
+    ports:
+      - "3306:3306"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - habr
+
+
+networks:
+  habr:
+    driver: bridge
